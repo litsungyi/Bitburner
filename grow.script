@@ -1,0 +1,23 @@
+var server = args[0];
+
+if (!fileExists('whitelist.script', server)) {
+	var serverMaxMoney = getServerMaxMoney(server);
+	var serverMoneyThreshold = serverMaxMoney * 1.2;
+	var serverMinSecurityLevel = getServerMinSecurityLevel(server);
+	var serverSecurityLevelThreshold = serverMinSecurityLevel * 1.2;
+	while (true) {
+		var securityLevel = getServerSecurityLevel(server);
+		if (securityLevel > serverSecurityLevelThreshold) {
+			weaken(server);
+		}
+		else {
+			var serverMoney = getServerMoneyAvailable(server);
+			if (serverMoney < serverMoneyThreshold) {
+				grow(server);
+			}
+			else {
+				hack(server);
+			}
+		}
+	}
+}
