@@ -1,0 +1,106 @@
+function scanServers(hostname, hackingLevel) {
+	var useableServers = [];
+	var servers = scan(hostname);
+	print('Scanning from ' + hostname + ' ...');
+	for (var i in servers) {
+		var server = servers[i];
+		print('  Scanned server from ' + hostname + ' => ' + server);
+		if (hasRootAccess(server)) {
+			if (fileExists('whitelist.script', server)) {
+				print('    ' + server + ' in whitelist');
+			}
+			else {
+				print('    ' + server + ' has root access!');
+				useableServers.push(server);
+			}
+		}
+		else if (hackingLevel > getServerRequiredHackingLevel(server)) {
+			print('    ' + server + ' can nuke!');
+			var portsRequired = getServerNumPortsRequired(server);
+			switch (portsRequired) {
+				case 5:
+					if (!fileExists('SQLInject.exe', 'home')) {
+						print('      Cannot SQLInject ' + server + '!');
+						// NOTE: Cannot hack this server
+						break;
+					}
+
+					sqlinject(server);
+					// NOTE: Passthrough
+
+				case 4:
+					if (!fileExists('HTTPWorm.exe', 'home')) {
+						print('      Cannot HTTPWorm ' + server + '!');
+						// NOTE: Cannot hack this server
+						break;
+					}
+
+					httpworm(server);
+					// NOTE: Passthrough
+
+				case 3:
+					if (!fileExists('relaySMTP.exe', 'home')) {
+						print('      Cannot relaySMTP ' + server + '!');
+						// NOTE: Cannot hack this server
+						break;
+					}
+
+					relaysmtp(server);
+					// NOTE: Passthrough
+
+				case 2:
+					if (!fileExists('FTPCrack.exe', 'home')) {
+						print('      Cannot FTPCrack ' + server + '!');
+						// NOTE: Cannot hack this server
+						break;
+					}
+
+					ftpcrack(server);
+					// NOTE: Passthrough
+
+				case 1:
+					if (!fileExists('BruteSSH.exe', 'home')) {
+						print('      Cannot BruteSSH ' + server + '!');
+						// NOTE: Cannot hack this server
+						break;
+					}
+
+					brutessh(server);
+					// NOTE: Passthrough
+
+				case 0:
+					print('      NUKE ' + server + '!');
+					nuke(server);
+					exec('new-server.script', 'home', 1, server);
+					useableServers.push(server);
+					break;
+			}
+		}
+	}
+
+	return useableServers;
+}
+
+function getAllAvailableServers(root, availableServers, hackingLevel) {
+	var newServers = [];
+	var servers = scanServers(root, hackingLevel);
+	for (var i in servers) {
+		var server = servers[i];
+		print('Scan Server: ' + server);
+		if (!availableServers.hasOwnProperty(server)) {
+			availableServers[server] = hasRootAccess(server);
+			newServers.push(server);
+		}
+	}
+
+	for (var i in newServers) {
+		var server = newServers[i];
+		getAllAvailableServers(server, availableServers, hackingLevel);
+	}
+}
+
+while (true) {
+	var availableServers = {};
+	var hackingLevel = getHackingLevel();
+	getAllAvailableServers('home', availableServers, hackingLevel);
+}
