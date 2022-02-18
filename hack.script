@@ -1,0 +1,15 @@
+var server = args[0];
+
+if (!fileExists('whitelist.script', server)) {
+	var serverMaxMoney = getServerMaxMoney(server);
+	var serverMoneyThreshold = serverMaxMoney * 0.01;
+	while (true) {
+		var serverMoney = getServerMoneyAvailable(server);
+		if (serverMoney > serverMoneyThreshold) {
+			hack(server);
+		}
+		else {
+			grow(server);
+		}
+	}
+}
