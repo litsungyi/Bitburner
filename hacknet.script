@@ -1,0 +1,104 @@
+function gainFromCurrentNode(level, ram, core)
+{
+	return (level * 1.5) * Math.pow(1.035, ram - 1) * ((core+5) / 6);
+}
+
+while(true)
+{
+	var purchaseNodeCost = hacknet.getPurchaseNodeCost();
+	var purchaseNodeGain = gainFromCurrentNode(1, 1, 1);
+	var purchaseNodeRate = purchaseNodeGain / purchaseNodeCost;
+	var upgradeNodeIndex = -1;
+	var upgradeType = 'node';
+	var gainRate = purchaseNodeRate;
+	var upgradeRequirement = purchaseNodeCost;
+	//print('purchaseNodeCost: ' + purchaseNodeCost);
+
+	for (var i = 0; i < hacknet.numNodes(); ++i)
+	{
+		var nodeStats = hacknet.getNodeStats(i);
+		var currentGain = gainFromCurrentNode(nodeStats.level, nodeStats.ram, nodeStats.cores);
+		var production = nodeStats.production;
+		var levelUpgradeCost = hacknet.getLevelUpgradeCost(i, 1);
+		var levelUpgradeGain = gainFromCurrentNode(nodeStats.level + 1, nodeStats.ram, nodeStats.cores) - currentGain;
+		var levelUpgradeGainRate = levelUpgradeGain / levelUpgradeCost;
+		var ramUpgradeCost = hacknet.getRamUpgradeCost(i, 1);
+		var ramUpgradeGain = gainFromCurrentNode(nodeStats.level, nodeStats.ram + 1, nodeStats.cores) - currentGain;
+		var ramUpgradeGainRate = ramUpgradeGain / ramUpgradeCost;
+		var coreUpgradeCost = hacknet.getCoreUpgradeCost(i, 1);
+		var coreUpgradeGain = gainFromCurrentNode(nodeStats.level, nodeStats.ram, nodeStats.cores + 1) - currentGain;
+		var coreUpgradeGainRate = coreUpgradeGain / coreUpgradeCost;
+
+		if (levelUpgradeGainRate > gainRate)
+		{
+			upgradeNodeIndex = i;
+			upgradeType = 'level';
+			gainRate = levelUpgradeGainRate;
+			upgradeRequirement = levelUpgradeCost;
+		}
+
+		if (ramUpgradeGainRate > gainRate)
+		{
+			upgradeNodeIndex = i;
+			upgradeType = 'ram';
+			gainRate = ramUpgradeGainRate;
+			upgradeRequirement = ramUpgradeCost;
+		}
+
+		if (coreUpgradeGainRate > gainRate)
+		{
+			upgradeNodeIndex = i;
+			upgradeType = 'core';
+			gainRate = coreUpgradeGainRate;
+			upgradeRequirement = coreUpgradeCost;
+		}
+
+		//print('node #' + i + ' (' + nodeStats.name + ')');
+		//print('  production: ' + production);
+		//print('  level: ' + nodeStats.level);
+		//print('  ram: ' + nodeStats.ram);
+		//print('  cores: ' + nodeStats.cores);
+		//print('  levelUpgradeCost: ' + levelUpgradeCost);
+		//print('  levelUpgradeGain: ' + levelUpgradeGain);
+		//print('  ramUpgradeCost: ' + ramUpgradeCost);
+		//print('  ramUpgradeGain: ' + ramUpgradeGain);
+		//print('  coreUpgradeCost: ' + coreUpgradeCost);
+		//print('  coreUpgradeGain: ' + coreUpgradeGain);
+	}
+
+	//print('Upgrade node: ' + upgradeNodeIndex);
+	//print('Upgrade type:' + upgradeType);
+	//print('Upgrade Requirement = $' + upgradeRequirement);
+	//print('Gain Rate = $' + gainRate + '/second');
+
+    // Wait fro money
+	var money = getServerMoneyAvailable('home');
+	while(money < upgradeRequirement)
+	{
+		sleep(100);
+		money = getServerMoneyAvailable('home');
+	}
+
+	switch (upgradeType)
+	{
+		case 'node':
+		var result = hacknet.purchaseNode();
+		print('Purchase node, result: ' + result);
+		break;
+
+		case 'level':
+		var result = hacknet.upgradeLevel(upgradeNodeIndex, 1);
+		print('Purchase level for node #' + upgradeNodeIndex + ', result: ' + result);
+		break;
+		
+		case 'ram':
+		var result = hacknet.upgradeRam(upgradeNodeIndex, 1);
+		print('Purchase ram for node #' + upgradeNodeIndex + ', result: ' + result);
+		break;
+
+		case 'core':
+		var result = hacknet.upgradeCore(upgradeNodeIndex, 1);
+		print('Purchase core for node #' + upgradeNodeIndex + ', result: ' + result);
+		break;
+	}
+}
