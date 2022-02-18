@@ -1,0 +1,59 @@
+function scanServers(hostname, hackingLevel) {
+	var useableServers = [];
+	var servers = scan(hostname);
+	print('Scanning from ' + hostname + ' ...');
+	for (var i in servers) {
+		var server = servers[i];
+		print('  Scanned server from ' + hostname + ' => ' + server);
+		if (hasRootAccess(server)) {
+			if (fileExists('whitelist.script', server)) {
+				print('    ' + server + ' in whitelist');
+			}
+			else {
+				useableServers.push(server);
+			}
+		}
+	}
+
+	return useableServers;
+}
+
+function getAllAvailableServers(root, availableServers, hackingLevel) {
+	var newServers = [];
+	var servers = scanServers(root, hackingLevel);
+	for (var i in servers) {
+		var server = servers[i];
+		print('Scan Server: ' + server);
+		if (!availableServers.hasOwnProperty(server)) {
+			availableServers[server] = {
+				hasRootAccess: hasRootAccess(server),
+				availableMoney: getServerMoneyAvailable(server)
+			}
+			newServers.push(server);
+		}
+	}
+
+	for (var i in newServers) {
+		var server = newServers[i];
+		getAllAvailableServers(server, availableServers, hackingLevel);
+	}
+}
+
+var availableServers = {};
+var hackingLevel = getHackingLevel();
+getAllAvailableServers('home', availableServers, hackingLevel);
+
+var newServerRam = getScriptRam('new-server.script', 'home');
+var maxRam = getServerMaxRam('home');
+for (var server in availableServers) {
+	if (hasRootAccess(server) && !fileExists('whitelist.script', server)) {
+		killall(server);
+
+		var usedRam = getServerUsedRam('home');
+		while (maxRam - usedRam < newServerRam) {
+			sleep(10000);
+		}
+
+		run('new-server.script', 1, server);
+	}
+}
