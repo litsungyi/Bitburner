@@ -1,0 +1,107 @@
+function scanServers(hostname, hackingLevel) {
+	var useableServers = [];
+	var servers = scan(hostname);
+	print('Scanning from ' + hostname + ' ...');
+	for (var i in servers) {
+		var server = servers[i];
+		print('  Scanned server from ' + hostname + ' => ' + server);
+		if (hasRootAccess(server)) {
+			if (fileExists('whitelist.script', server)) {
+				print('    ' + server + ' in whitelist');
+			}
+			else {
+				useableServers.push(server);
+			}
+		}
+	}
+
+	return useableServers;
+}
+
+function getAllAvailableServers(root, availableServers, hackingLevel) {
+	var newServers = [];
+	var servers = scanServers(root, hackingLevel);
+	for (var i in servers) {
+		var server = servers[i];
+		print('Scan Server: ' + server);
+		if (!availableServers.hasOwnProperty(server)) {
+			availableServers[server] = {
+				hasRootAccess: hasRootAccess(server),
+				availableMoney: getServerMoneyAvailable(server)
+			}
+			newServers.push(server);
+		}
+	}
+
+	for (var i in newServers) {
+		var server = newServers[i];
+		getAllAvailableServers(server, availableServers, hackingLevel);
+	}
+}
+
+function sortByMoney(availableServers) {
+	var availableServerArray = [];
+	for (var serverName in availableServers) {
+		var server = availableServers[serverName];
+		availableServerArray.push(
+			{
+				name: serverName,
+				hasRootAccess: server.hasRootAccess,
+				availableMoney: server.availableMoney
+			}
+		);
+	}
+
+	for (var i = 0; i < availableServerArray.length - 1; ++i)
+	{
+		var index = i;
+		for (var j = i + 1; j < availableServerArray.length; ++j)
+		{
+			if (availableServerArray[i].availableMoney < availableServerArray[j].availableMoney)
+			{
+				index = j;
+			}
+		}
+
+		if (index !== i)
+		{
+			var temp = availableServerArray[i];
+			availableServerArray[i] = availableServerArray[index];
+			availableServerArray[index] = temp;
+		}
+	}
+
+	return availableServerArray;
+}
+
+var hostname = args[0];
+if (!fileExists('whitelist.script', hostname)) {
+	scp('hack.script', 'home', hostname);
+	scp('grow.script', 'home', hostname);
+
+	var availableServers = {};
+	var hackingLevel = getHackingLevel();
+	getAllAvailableServers('home', availableServers, hackingLevel);
+
+	var hackRam = getScriptRam('hack.script', hostname);
+	var growRam = getScriptRam('grow.script', hostname);
+
+	var sorttedServers = sortByMoney(availableServers);
+	for (var i in sorttedServers) {
+		var server = sorttedServers[i];
+		if (server.hasRootAccess && !fileExists('whitelist.script', server.name)) {
+			if (server.availableMoney > 0) {
+				var maxRam = getServerMaxRam(hostname);
+				var usedRam = getServerUsedRam(hostname);
+				if (maxRam - usedRam >= hackRam) {
+					exec('hack.script', hostname, 1, server.name);
+					usedRam = getServerUsedRam(hostname);
+				}
+
+				if (maxRam - usedRam >= growRam) {
+					exec('grow.script', hostname, 1, server.name);
+				}
+			}
+		}
+	}
+}
